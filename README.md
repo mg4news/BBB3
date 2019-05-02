@@ -11,3 +11,5 @@ Contains:
  - Some simple test apps:
    - Ye olde hello world
    - A threading example
+
+All of the notes are kept in Jupyter notebooks in the notebooks directory
