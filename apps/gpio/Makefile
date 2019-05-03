@@ -17,15 +17,26 @@ root_dir:= $(shell pwd)/../..
 #------------------------------------------------------------------------------
 # Include paths, and source lists
 #------------------------------------------------------------------------------
-simple_cpp := $(shell pwd)/src/simple.cpp
+gpio_cpp := $(shell pwd)/src/gpio.cpp
+
+# posutils (C source)
+posutils_dir := $(root_dir)/libs/posutils
+posutils_c := $(posutils_dir)/posutils.c \
+	$(posutils_dir)/pumutex.c \
+	$(posutils_dir)/puthread.c
+	
+# GPIO factory
+gpiof_dir := $(root_dir)/libs/gpiof
+gpiof_cpp := $(gpiof_dir)/gpiof.cpp \
+	$(gpiof_dir)/gpioutils.cpp
 
 #------------------------------------------------------------------------------
 # Executable, C source list, CPP source list
 #------------------------------------------------------------------------------
 LOCAL_INC := -I$(root_dir)/include
-EXECUTABLE:= simple
-C_SRC   := 
-CPP_SRC := $(simple_cpp) 
+EXECUTABLE:= gpio
+C_SRC   := $(posutils_c)
+CPP_SRC := $(gpiof_cpp) $(gpio_cpp) 
 
 #------------------------------------------------------------------------------
 # Library lists, for dynamically linked libraries. Should normally only be "glib"
