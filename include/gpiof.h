@@ -48,7 +48,7 @@ using namespace std;
 #define GPIO_ERR_GENERAL    (-1)  // Some system error, i.e. couldn't export, open, etc
 #define GPIO_ERR_HANDLE     (-2)  // Invalid pin handle
 #define GPIO_ERR_WAITING    (-3)  // Valid pin, currently waiting for edge
-#define GPIO_ERR_INPUT      (-4)  // Can't set a value, this is an input
+#define GPIO_ERR_DIRECTION  (-4)  // Wrong pin direction for the action
 #define GPIO_ERR_USED       (-5)  // Pin is already in use
 
 // Edge settings
@@ -72,7 +72,7 @@ public:
 
     // Handle open and close
     // Two possible policies
-    // - one user per pin (default), 2nd open results in
+    // - one user per pin (default), 2nd open results in an error - GPIO_ERR_USED
     // - multiple users per pin, BUT they all get the same handle. Close() counts down users
     int open(
         uint32_t      uiPin,    // GPIO pin number
@@ -82,6 +82,12 @@ public:
         pin_handle_t* pHnd);    // populated with the handle on success
     int close(pin_handle_t hnd);
 
+    // GPIO value
+    // 0 = clear, low
+    // non-0 - set, high
+    int setVal( pin_handle_t hnd, int  iVal ); // set a value on an output pin only
+    int getVal( pin_handle_t hnd, int* pVal ); // read on input (actual value) and output (stored value) pin
+
     // GPIO direction control
     // 0     = input direction
     // non-0 = output direction
@@ -90,11 +96,14 @@ public:
     int setDir( pin_handle_t hnd, int  iDir);
     int getDir( pin_handle_t hnd, int* pDir);
 
-    // GPIO value
-    // 0 = clear, low
-    // non-0 - set, high
-    int setVal( pin_handle_t hnd, int  iVal );
-    int getVal( pin_handle_t hnd, int* pVal );
+    // GPIO edge (only valid if pin is input)
+    int setEdge( pin_handle_t hnd, gpio_edge_t enEdge );
+    int getEdge( pin_handle_t hnd, gpio_edge_t* pEdge );
+
+    // Blocking wait for edge, CALL THIS FROM A THREAD
+    // Only on an input pin
+    // Will only set the edge value if it does not match
+    int waitForEdge( pin_handle_t hnd, gpio_edge_t enEdge, int* pVal );
 
 private:
     static CGpioF* m_pInstance;

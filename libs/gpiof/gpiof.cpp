@@ -176,3 +176,175 @@ int CGpioF::close(pin_handle_t hnd) {
     return (iRet);
 }
 // CGpioF::close
+
+// set a value on an output pin only
+int CGpioF::setVal( pin_handle_t hnd, int  iVal ) {
+    int iRet = GPIO_ERR_HANDLE;
+    pin_t* pPin = (pin_t*)hnd;
+
+    if (this->isHandleOk(hnd)) {
+        if (GPIO_DIR_OUT == pPin->iDir) {
+            pPin->iVal = (GPIO_VAL_CLR == iVal) ? GPIO_VAL_CLR : GPIO_VAL_SET;
+            iRet = gpioutils_set_val( pPin->uiPin, pPin->iVal );
+        } else {
+            LOG_ERROR("Cant write to an input (pin %u)\n", pPin->uiPin);
+            iRet = GPIO_ERR_DIRECTION;
+        }
+    }
+    return (iRet);
+}
+// CGpioF::setVal
+
+// For an input pin, read the actual value
+// For an output pin, return the last value you wrote to it
+int CGpioF::getVal( pin_handle_t hnd, int* pVal ) {
+    int iRet = GPIO_ERR_HANDLE;
+    pin_t* pPin = (pin_t*)hnd;
+
+    if (this->isHandleOk(hnd)) {
+        if (GPIO_DIR_INP == pPin->iDir) {
+            iRet = gpioutils_get_val( pPin->uiPin, pVal );
+        } else {
+            *pVal = pPin->iVal;
+            iRet = 0;
+        }
+    }
+    return (iRet);
+}
+// CGpioF::getVal
+
+// set direction
+int CGpioF::setDir( pin_handle_t hnd, int iDir ) {
+    int iRet = GPIO_ERR_HANDLE;
+    pin_t* pPin = (pin_t*)hnd;
+
+    if (this->isHandleOk(hnd)) {
+        // Normalise the value
+        iDir = (GPIO_DIR_INP == iDir) ? GPIO_DIR_INP : GPIO_DIR_OUT;
+
+        // Don't do anything if its waiting for an edge
+        if (pPin->bWaiting) {
+            iRet = GPIO_ERR_WAITING;
+        }
+
+        // Different? the set it
+        else if (iDir != pPin->iDir) {
+            pPin->iDir = iDir;
+            iRet = gpioutils_set_dir( pPin->uiPin, pPin->iDir );
+            ASSERT( 0 == iRet );
+        }
+
+        // Nothing to do
+        else {
+
+        }
+    }
+    return (iRet);
+}
+// CGpioF::setDir
+
+// Get direction
+// Use stored value, don't bother writing to the pin
+int CGpioF::getDir( pin_handle_t hnd, int* pDir ) {
+    int iRet = GPIO_ERR_HANDLE;
+    pin_t* pPin = (pin_t*)hnd;
+
+    if (this->isHandleOk(hnd)) {
+        *pDir = pPin->iDir;
+        iRet = 0;
+    }
+    return (iRet);
+}
+// CGpioF::getDir
+
+// set edge
+int CGpioF::setEdge( pin_handle_t hnd, gpio_edge_t enEdge ) {
+    int iRet = GPIO_ERR_HANDLE;
+    pin_t* pPin = (pin_t*)hnd;
+    ASSERT(enEdge >= 0 && enEdge < GPIO_EDGE_UNDEF);
+
+    if (this->isHandleOk(hnd)) {
+
+        // Can't apply to outputs
+        if (GPIO_DIR_OUT == pPin->iDir) {
+            LOG_ERROR("Cant set the edge on an output (pin %u)\n", pPin->uiPin);
+            iRet = GPIO_ERR_DIRECTION;
+        }
+
+        // Don't do anything if its waiting for an edge
+        if (pPin->bWaiting) {
+            iRet = GPIO_ERR_WAITING;
+        }
+
+        // If different, then apply
+        else if (enEdge != pPin->enEdge) {
+            pPin->enEdge = enEdge;
+            iRet = gpioutils_set_edge( pPin->uiPin, pPin->enEdge );
+            ASSERT( 0 == iRet );
+        }
+
+        // Nothing to do
+        else {
+            iRet = 0;
+        }
+    }
+    return (iRet);
+}
+// CGpioF::setEdge
+
+// Get direction
+// Use stored value, don't bother writing to the pin
+int CGpioF::getEdge( pin_handle_t hnd, gpio_edge_t* pEdge ) {
+    int iRet = GPIO_ERR_HANDLE;
+    pin_t* pPin = (pin_t*)hnd;
+
+    if (this->isHandleOk(hnd)) {
+        *pEdge = pPin->enEdge;
+        iRet = 0;
+    }
+    return (iRet);
+}
+// CGpioF::getEdge
+
+// Blocking wait for edge, CALL THIS FROM A THREAD
+// Only wait on an input pin
+// Will only set the edge value if it does not match
+int CGpioF::waitForEdge( pin_handle_t hnd, gpio_edge_t enEdge, int* pVal ) {
+    int iRet = GPIO_ERR_HANDLE;
+    pin_t* pPin = (pin_t*)hnd;
+    ASSERT(enEdge >= 0 && enEdge < GPIO_EDGE_UNDEF);
+
+    if (this->isHandleOk(hnd)) {
+        if (GPIO_DIR_INP == pPin->iDir) {
+
+            // Currently busy?
+            if (pPin->bWaiting) {
+                iRet = GPIO_ERR_WAITING;
+            } else {
+                iRet = 0;
+            }
+
+            // Change the edge type if needed, doing it every time is slow
+            if (0 == iRet && (enEdge != pPin->enEdge)) {
+                pPin->enEdge = enEdge;
+                iRet = gpioutils_set_edge( pPin->uiPin, pPin->enEdge );
+            }
+
+            // Still OK (or did nothing)
+            if (0 == iRet) {
+                pPin->bWaiting = true;
+                iRet = gpio_utils_wait_for_edge( pPin->uiPin, pVal );
+                pPin->bWaiting = false;
+            }
+
+        } else {
+            LOG_ERROR("Cant wait on an output (pin %u)\n", pPin->uiPin);
+            iRet = GPIO_ERR_DIRECTION;
+        }
+    }
+    return (iRet);
+}
+// CGpioF::waitForEdge
+
+
+
