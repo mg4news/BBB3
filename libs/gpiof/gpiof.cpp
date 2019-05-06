@@ -333,7 +333,7 @@ int CGpioF::waitForEdge( pin_handle_t hnd, gpio_edge_t enEdge, int* pVal ) {
             // Still OK (or did nothing)
             if (0 == iRet) {
                 pPin->bWaiting = true;
-                iRet = gpio_utils_wait_for_edge( pPin->uiPin, pVal );
+                iRet = gpioutils_wait_for_edge( pPin->uiPin, pVal );
                 pPin->bWaiting = false;
             }
 
@@ -346,5 +346,17 @@ int CGpioF::waitForEdge( pin_handle_t hnd, gpio_edge_t enEdge, int* pVal ) {
 }
 // CGpioF::waitForEdge
 
+// Interrupts a "wait on edge"
+int CGpioF::interruptWait( pin_handle_t hnd ) {
+    int iRet = GPIO_ERR_HANDLE;
+    pin_t* pPin = (pin_t*)hnd;
 
-
+    if (this->isHandleOk(hnd)) {
+        iRet = 0;
+        if (pPin->bWaiting) {
+            gpioutils_interrupt_wait(pPin->uiPin);
+        }
+    }
+    return (iRet);
+}
+// CGpioF::interruptWait

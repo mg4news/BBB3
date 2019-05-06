@@ -62,7 +62,7 @@ enum gpio_edge_t {
 
 /**
  * Singleton GPIO factory
- * Usage: CGpioF->getInstance();
+ * Usage: CGpioF::getInstance();
  */
 class CGpioF
 {
@@ -104,6 +104,7 @@ public:
     // Only on an input pin
     // Will only set the edge value if it does not match
     int waitForEdge( pin_handle_t hnd, gpio_edge_t enEdge, int* pVal );
+    int interruptWait( pin_handle_t hnd );
 
 private:
     static CGpioF* m_pInstance;

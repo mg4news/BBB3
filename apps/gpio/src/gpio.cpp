@@ -19,44 +19,39 @@
 //=============================================================================
 
 /**
- * @file     simple.cpp
- * @brief    Simple BeagleBone "hello world" to test cross compiling
+ * @file     gpio.cpp
+ * @brief    Simple BeagleBone threaded GPIO
  */
 
 /**** System includes, namespace, then local includes  ***********************/
 #include <iostream>
+#include <pthread.h>
 
 // Local includes
 #include "logging.h"
+#include "posutils.h"
+#include "gpiof.h"
 
 // namespace
 using namespace std;
 
-/**** Local (anonymous) namespace *******************************************/
+//=== Local (anonymous) namespace =============================================
 
-/**** Definitions ************************************************************/
+//=============================================================================
+// Local function definitions
+//=============================================================================
+void* thread_fct(void* pArg) {
+    cout << "Thread is running!"<< endl;
 
-/**** Macros ****************************************************************/
+    // Write 1 to the GPIO
 
-/**** Local function prototypes (NB Use static modifier) ********************/
-static void info(void);
-
-/****************************************************************************/
-/* LOCAL FUNCTION DEFINITIONS                                               */
-/****************************************************************************/
-void info(void) {
-    cout << "Built on " __DATE__ " at " __TIME__ << endl;
-    cout << "Uses C++ standard " << __cplusplus << endl;
-#if defined(__clang__)
-    cout << "Compiled with Clang " << __clang_version__ << endl;
-#else
-    cout << "Compiled with GCC " << __GNUC__ << "." << __GNUC_MINOR__ << "." << __GNUC_PATCHLEVEL__ << endl;
-#endif
+    return (NULL);
 }
 
-/****************************************************************************/
-/* PUBLIC FUNCTION DEFINITIONS                                              */
-/****************************************************************************/
+
+//=============================================================================
+// Public function definitions
+//=============================================================================
 
 /**
  * Main
@@ -68,10 +63,23 @@ void info(void) {
 int main( int argc, char *argv[] )
 {
     // Super complex program
-    info();
     cout << "GPIO test" << endl;
 
+    // Initialisation
+    int iRet = posutils_init();
+    ASSERT(0 == iRet);
+
+    // Get the factory handle
+    CGpioF* pGpio = CGpioF::getInstance();
+
+    // Get a GPIO handle
+    CGpioF::pin_handle_t hnd;
+    iRet = pGpio->open( 62, GPIO_DIR_OUT, GPIO_EDGE_NONE, GPIO_VAL_CLR, &hnd);
+    ASSERT(0 == iRet);
+    iRet = pGpio->setVal(hnd, GPIO_VAL_SET);
+
     // done and dusted
+    posutils_exit();
     return (0);
 }
 /* main */

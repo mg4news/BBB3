@@ -40,6 +40,7 @@ int gpioutils_set_val(uint32_t uiPin, int iVal);
 int gpioutils_get_val(uint32_t uiPin, int* pVal);
 int gpioutils_set_edge(uint32_t uiPin, gpio_edge_t enEdge);
 int gpioutils_get_edge(uint32_t uiPin, gpio_edge_t* pEdge);
-int gpio_utils_wait_for_edge(uint32_t uiPin, int* pVal);
+int gpioutils_wait_for_edge(uint32_t uiPin, int* pVal);
+int gpioutils_interrupt_wait(uint32_t uiPin);
 
 #endif /* __GPIOUTILS_H_ */

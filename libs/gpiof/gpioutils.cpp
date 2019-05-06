@@ -37,16 +37,25 @@ using namespace std;
 #include "gpiof.h"
 #include "gpioutils.h"
 #include "logging.h"
+#include "sll.h"
 
 //=== Local (anonymous) namespace =============================================
 namespace {
     const char* SZ_GPIO_EXPORT      = "/sys/class/gpio/export";
     const char* SZ_GPIO_UNEXPORT    = "/sys/class/gpio/export";
-    const char* SZ_GPIO_DIRECTION   = "/sys/class/gpio%u/direction";
-    const char* SZ_GPIO_VALUE       = "/sys/class/gpio%u/value";
-    const char* SZ_GPIO_EDGE        = "/sys/class/gpio%u/edge";
+    const char* SZ_GPIO_DIRECTION   = "/sys/class/gpio/gpio%u/direction";
+    const char* SZ_GPIO_VALUE       = "/sys/class/gpio/gpio%u/value";
+    const char* SZ_GPIO_EDGE        = "/sys/class/gpio/gpio%u/edge";
 
     const char* SZ_EDGE_TYPES[GPIO_EDGE_UNDEF] = {"none", "rising", "falling", "both"};
+
+    // Linked list of pin contexts, stores the epoll temporarily so a wait can be interrupted
+    typedef struct pin_ctxt_tag {
+        uint32_t uiPin;
+        int      fdEpoll;
+        SLL_ENTRY(pin_ctxt_tag);
+    }   pin_ctxt_t;
+    pin_ctxt_t* pCtxtList  = NULL;
 }
 
 //=============================================================================
@@ -70,6 +79,13 @@ int gpioutils_export(uint32_t uiPin) {
     // All good
     path << uiPin;
     path.close();
+
+    // add an entry to the SLL
+    pin_ctxt_t* pCtxt = (pin_ctxt_t*)malloc(sizeof(pin_ctxt_t));
+    pCtxt->uiPin   = uiPin;
+    pCtxt->fdEpoll = -1;
+    SLL_ELEM_ADD(pCtxtList, pCtxt);
+
     return (0);
 }
 // gpioutils_export
@@ -87,6 +103,15 @@ int gpioutils_unexport(uint32_t uiPin) {
     // All good
     path << uiPin;
     path.close();
+
+    // Kill the pin context
+    pin_ctxt_t* pCtxt;
+    SLL_FOR_EACH(pCtxtList, pCtxt) {
+        if (pCtxt->uiPin == uiPin) {
+            SLL_ELEM_DEL(pin_ctxt_t, pCtxtList, pCtxt);
+            break;
+        }
+    }
     return (0);
 }
 // gpioutils_unexport
@@ -225,7 +250,7 @@ int gpioutils_get_edge(uint32_t uiPin, gpio_edge_t* pEdge) {
 }
 // gpioutils_get_edge
 
-int gpio_utils_wait_for_edge(uint32_t uiPin, int* pVal) {
+int gpioutils_wait_for_edge(uint32_t uiPin, int* pVal) {
     #define EVT_RD_SIZE (15)
     char szPath[64];
     char pEvt[EVT_RD_SIZE+1];
@@ -245,6 +270,15 @@ int gpio_utils_wait_for_edge(uint32_t uiPin, int* pVal) {
 
     // OK if both are open
     if ((-1 != fd_gpio) && (-1 != fd_epoll)) {
+
+        // Context management, allows interrupting of the wait
+        pin_ctxt_t* pCtxt = NULL;
+        SLL_FOR_EACH(pCtxtList, pCtxt) {
+            if (pCtxt->uiPin == uiPin) {
+                pCtxt->fdEpoll = fd_epoll;
+                break;
+            }
+        }
 
         // Populate and register event structure
         ev.data.fd = fd_gpio;
@@ -273,6 +307,11 @@ int gpio_utils_wait_for_edge(uint32_t uiPin, int* pVal) {
                 iRet = -1;
             }
         }
+
+        // Clean up context pointer
+        if ((pCtxt) && (pCtxt->uiPin == uiPin)) {
+            pCtxt->fdEpoll = -1;
+        }
     }
 
     // always clean up
@@ -280,5 +319,23 @@ int gpio_utils_wait_for_edge(uint32_t uiPin, int* pVal) {
     close( fd_gpio );
     return (iRet);
 }
+// gpioutils_wait_for_edge
 
+// Interrupts a thread waiting on epoll, by sending an event to the poller.
+int gpioutils_interrupt_wait(uint32_t uiPin) {
+    pin_ctxt_t* pCtxt = NULL;
+    uint8_t     pBuff[4];
+
+    // Value doesn't matter
+    pBuff[0] = 1;
+    SLL_FOR_EACH(pCtxtList, pCtxt) {
+        if (pCtxt->uiPin == uiPin) {
+            int iRW = write( pCtxt->fdEpoll, pBuff, 1 );
+            ASSERT(1 == iRW);
+            break;
+        }
+    }
+    return (0);
+}
+//  gpioutils_interrupt_wait
 
