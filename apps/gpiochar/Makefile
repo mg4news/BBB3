@@ -17,7 +17,7 @@ root_dir:= $(shell pwd)/../..
 #------------------------------------------------------------------------------
 # Include paths, and source lists
 #------------------------------------------------------------------------------
-gpio_cpp := $(shell pwd)/src/gpio.cpp
+gpiochar_cpp := $(shell pwd)/src/gpiochar.cpp
 
 # posutils (C source)
 posutils_dir := $(root_dir)/libs/posutils
@@ -25,27 +25,31 @@ posutils_c := $(posutils_dir)/posutils.c \
 	$(posutils_dir)/pumutex.c \
 	$(posutils_dir)/puthread.c
 	
-# GPIO factory
-gpiof_dir := $(root_dir)/libs/gpiof
-gpiof_cpp := $(gpiof_dir)/gpiof.cpp \
-	$(gpiof_dir)/gpioutils.cpp
-
 #------------------------------------------------------------------------------
 # Executable, C source list, CPP source list
+##SYS_INC  := $(shell pkg-config --cflags $(LIB_LST))
+# Haven't quite figured out pkg-config and cross compiling, so the header files are physically copied into
+# a special sysinc directory
 #------------------------------------------------------------------------------
 LOCAL_INC := -I$(root_dir)/include
-EXECUTABLE:= gpio
+SYS_INC := -I$(root_dir)/sysinc
+EXECUTABLE:= gpiochar
 C_SRC   := $(posutils_c)
-CPP_SRC := $(gpiof_cpp) $(gpio_cpp) 
+CPP_SRC := $(gpiochar_cpp) 
 
 #------------------------------------------------------------------------------
 # Library lists, for dynamically linked libraries. Should normally only be "glib"
 # Note: "lib_lst" is resolved using pkg-config
 # Note: "extra-libs" are passed directly to the compiler as options 
 #------------------------------------------------------------------------------
-#LIB_LST := glib-2.0
-LIB_LST := 
-EXTRA_LIBS := -ludev -lpthread -lrt -pthread
+# LIB_LST := glib-2.0
+# Then generate links with := $(shell pkg-config --libs $(LIB_LST))
+# BUT..I havent figured this one out, so:
+# - first I run pkg-config --lib on the BBB3 board, and use that in the makefile
+# For the include files I add them to a local sysinc directory
+LIB_GPIOD := -L/usr/local/lib -lgpiod
+LIB_LST := $(LIB_GPIOD)
+EXTRA_LIBS := -lpthread -lrt -pthread
 
 #------------------------------------------------------------------------------
 # Definitions in the form -Dxxxxx
@@ -76,12 +80,10 @@ STRIP   := $(gcc_dir)/arm-linux-gnueabihf-strip
 #------------------------------------------------------------------------------
 # Compile settings
 #------------------------------------------------------------------------------
-##SYS_INC  := $(shell pkg-config --cflags $(LIB_LST))
-SYS_INC := 
 CFLAGS  := $(BUILD_OPTIONS) $(SYS_INC) $(LOCAL_INC) $(DEFINED) $(C_ONLY_DEFS)
 CPPFLAGS:= -std=c++1y $(BUILD_OPTIONS) $(SYS_INC) $(LOCAL_INC) $(DEFINED)
 ##LDFLAGS := $(shell pkg-config --libs $(LIB_LST)) $(EXTRA_LIBS)
-LDFLAGS := $(EXTRA_LIBS)
+LDFLAGS :=  $(LIB_LST) $(EXTRA_LIBS)
 
 C_OBJS    := $(patsubst %.c, %.o, $(C_SRC))
 CPP_OBJS  := $(patsubst %.cpp, %.o, $(CPP_SRC))
