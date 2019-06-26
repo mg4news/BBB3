@@ -6,11 +6,11 @@ Contains:
 - Eclipse setup
 - Some libraries:
   - Posix utilities to simplify threads, mutexes, etc
-  - Single Linked List (co I cant make sense of the docs for the existing Posix one)
-  - gpiof: A factory pattern library using sysfs (OBSOLETE! replaced by libgpiod)
+  - Single Linked List (cos I cant make sense of the complex docs for the existing Posix one)
  - Some simple test apps:
    - Ye olde hello world
    - A threading example
-   - A simple example using libgpiod to query the GPIO character devices 
+   - A simple example using libgpiod C interface to query the GPIO character devices
+   - Example using the libgpiod .CPP bindings 
 
 All of the notes are kept in Jupyter notebooks in the notebooks directory
