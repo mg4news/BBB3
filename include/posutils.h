@@ -284,7 +284,7 @@ int pu_mutex_create_type(
 typedef void* (*pu_thread_fct_t)( void* pArg );
 
 /**
- * @brief   Creates a non-RT pthread with the Comet constraints applied
+ * @brief   Creates a non-RT pthread with the constraints applied
  *
  * @param[in] fctMain     : Thread main function (entry point)
  * @param[in] pMainArg    : Argument for main
