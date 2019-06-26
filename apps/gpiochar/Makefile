@@ -26,13 +26,19 @@ posutils_c := $(posutils_dir)/posutils.c \
 	$(posutils_dir)/puthread.c
 	
 #------------------------------------------------------------------------------
+# Includes for the LIBGPIOD library
+#------------------------------------------------------------------------------
+GPIOD_DIR := $(root_dir)/libgpiod
+GPIOD_INC := -I$(GPIOD_DIR)/include
+	
+#------------------------------------------------------------------------------
 # Executable, C source list, CPP source list
 ##SYS_INC  := $(shell pkg-config --cflags $(LIB_LST))
 # Haven't quite figured out pkg-config and cross compiling, so the header files are physically copied into
 # a special sysinc directory
 #------------------------------------------------------------------------------
-LOCAL_INC := -I$(root_dir)/include
-SYS_INC := -I$(root_dir)/sysinc
+LOCAL_INC := $(GPIOD_INC) -I$(root_dir)/include
+SYS_INC :=
 EXECUTABLE:= gpiochar
 C_SRC   := $(posutils_c)
 CPP_SRC := $(gpiochar_cpp) 
@@ -57,7 +63,7 @@ EXTRA_LIBS := -lpthread -lrt -pthread
 DEFINED := 
 
 ###############################################################################
-# DONT MODIFY ANYTHINF ELSE BELOW THIS LINE
+# DONT MODIFY ANYTHING ELSE BELOW THIS LINE
 ###############################################################################
 
 #------------------------------------------------------------------------------
